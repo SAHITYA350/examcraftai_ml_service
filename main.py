@@ -328,29 +328,35 @@ async def extract_topics(request: MaterialRequest):
 async def get_prerequisites(request: PrereqRequest):
     """
     Input: Topic name
-    Output: List of topics to revise before this
+    Output: List of topics to revise AND Key Study Notes
     """
     try:
-        prompt = f"""You are ExamCraft AI. List prerequisites for learning this topic.
-
+        prompt = f"""You are ExamCraft AI. Provide an "Academic Quick-Start" guide for the following topic(s).
+        
 Topic: {request.topic}
 
 Return ONLY this JSON format:
 {{
     "topic": "{request.topic}",
-    "prerequisites": ["prereq1", "prereq2", "prereq3"],
-    "estimated_revision_time": "X hours",
+    "prerequisites": ["prereq1", "prereq2"],
+    "key_points": [
+        "Major concept 1: brief explanation",
+        "Major concept 2: brief explanation",
+        "Crucial Formula/Definition: key insight"
+    ],
+    "brief_summary": "A 2-sentence summary of what the student will learn in this session.",
+    "estimated_revision_time": "X minutes",
     "difficulty_level": "beginner/intermediate/advanced"
 }}"""
 
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are an educational expert. List learning prerequisites."},
+                {"role": "system", "content": "You are an educational expert. Provide high-density, high-value study summaries. Return only JSON."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
-            max_tokens=300
+            temperature=0.4,
+            max_tokens=800
         )
         
         result_text = response.choices[0].message.content
@@ -362,21 +368,17 @@ Return ONLY this JSON format:
         return json.loads(result_text.strip())
         
     except Exception as e:
-        fallback_map = {
-            "integration": ["Differentiation", "Limits", "Algebra"],
-            "differentiation": ["Limits", "Functions", "Algebra"],
-            "quadratic equations": ["Linear Equations", "Algebra", "Factors"],
-            "geometry": ["Basic Shapes", "Angles", "Measurements"],
-            "trigonometry": ["Geometry", "Angles", "Ratios"]
-        }
-        
-        topic_lower = request.topic.lower()
-        prereqs = fallback_map.get(topic_lower, ["Basic concepts", "Foundation topics"])
-        
+        print(f"Prerequisite error: {e}")
         return {
             "topic": request.topic,
-            "prerequisites": prereqs,
-            "estimated_revision_time": "1-2 hours",
+            "prerequisites": ["Basic fundamentals", "Contextual overview"],
+            "key_points": [
+                "Understand the core definitions of the topic.",
+                "Review how these concepts apply to modern problems.",
+                "Connect this material with your previous uploads."
+            ],
+            "brief_summary": "Review the core fundamentals to ensure a strong foundation before starting your practice quiz.",
+            "estimated_revision_time": "15 minutes",
             "difficulty_level": "intermediate"
         }
 
